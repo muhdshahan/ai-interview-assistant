@@ -1,8 +1,11 @@
 import requests
 import language_tool_python
 from textblob import TextBlob
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-TOGETHER_API_KEY = "tgp_v1_cxQWpIUae78O1gpIWQPoEllw3M4Zn3P2wthFunCO74A" 
+TOGETHER_API_KEY =os.getenv("TOGETHER_API_KEY") 
 
 tool = language_tool_python.LanguageTool('en-US')
 

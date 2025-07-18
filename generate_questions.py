@@ -1,7 +1,10 @@
 
 import requests
+import os
+from dotenv import load_dotenv
+load_dotenv()
 
-TOGETHER_API_KEY = "tgp_v1_cxQWpIUae78O1gpIWQPoEllw3M4Zn3P2wthFunCO74A"
+TOGETHER_API_KEY =os.getenv("TOGETHER_API_KEY")
 
 
 def generate_interview_questions(role: str): # promt
