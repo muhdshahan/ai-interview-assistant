@@ -1,1 +1,13 @@
+# Ignore virtual environment
+intervenv/
+
+# Ignore local environment variables
 .env
+
+# Ignore frontend build/static files (if needed)
+frontend/
+
+# Ignore ML-generated some code files
+backend/ml/audio_to_text.py
+backend/ml/evaluate_answer.py
+backend/main.py
