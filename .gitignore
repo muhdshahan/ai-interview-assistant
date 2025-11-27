@@ -6,6 +6,3 @@ intervenv/
 
 # Ignore frontend build/static files (if needed)
 frontend/
-
-# Ignore ML-generated some code files
-backend/main.py
