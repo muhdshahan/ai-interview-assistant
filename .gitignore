@@ -3,6 +3,3 @@ intervenv/
 
 # Ignore local environment variables
 .env
-
-# Ignore frontend build/static files (if needed)
-frontend/
