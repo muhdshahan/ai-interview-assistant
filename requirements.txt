@@ -8,3 +8,6 @@ alembic==1.17.2
 sqlalchemy==2.0.44
 pydantic==2.7.2
 asyncpg==0.31.0
+reportlab==4.0.4
+streamlit==1.52.1
+python-multipart==0.0.21

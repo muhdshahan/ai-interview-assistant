@@ -2,7 +2,7 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from backend.routers import auth, interview
+from backend.routers import auth, interview, stt
 from backend.db.database import engine, Base
 
 app = FastAPI(title="AI Interview Platform")
@@ -26,6 +26,7 @@ app.add_middleware(
 # Register routers8
 app.include_router(auth.router)
 app.include_router(interview.router)
+app.include_router(stt.router)
 
 @app.on_event("startup")
 async def on_startup():

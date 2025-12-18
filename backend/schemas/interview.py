@@ -30,11 +30,14 @@ class FinishRequest(BaseModel):
 
 
 class EvaluationDetail(BaseModel):
-    question_id: int
+    question_id: str
     question: str
     answer: str
     score: float
-    feedback: str
+    technical_score: float
+    grammar_score: float
+    technical_feedback: str
+    grammar_suggestions: str
 
     model_config = ConfigDict(from_attributes=True)  # optional but good
 

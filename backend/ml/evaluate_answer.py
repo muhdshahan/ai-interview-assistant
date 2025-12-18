@@ -2,6 +2,7 @@ from textblob import TextBlob
 from groq import Groq
 import os
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
@@ -26,19 +27,22 @@ def score_answer(question, answer):
     prompt = f"""
     You are an expert AI interviewer.
 
-    Evaluate the candidate's answer with 3 dimensions:
-    1. Technical correctness  
-    2. Grammar & clarity  
+    Evaluate the candidate answer STRICTLY in JSON.
 
-    Question: {question}
-    Candidate's Answer: {answer}
+    Question:
+    {question}
 
-    Provide the output in the EXACT format below:
+    Candidate Answer:
+    {answer}
 
-    Technical Score: X/5
-    Grammar Score: X/5
-    Feedback: <2–3 lines of technical feedback>
-    Grammar Suggestions: <1–2 grammar improvement suggestions>
+    Return ONLY valid JSON in this exact format:
+
+    {{
+    "technical_score": number out of 5,
+    "grammar_score": number out of 5,
+    "technical_feedback": "2-3 lines explaining what is missing or correct",
+    "grammar_suggestions": "1-2 grammar improvement suggestions"
+    }}
     """
 
     try:
@@ -49,18 +53,24 @@ def score_answer(question, answer):
             ],
             temperature=0.2
         )
+        evaluation_text = resonse.choices[0].message.content.strip()
+        try:
+            evaluation_json = json.loads(evaluation_text)
+        except:
+            evaluation_json = {
+                "technical_score": 0.0,
+                "grammar_score": 0.0,
+                "technical_feedback": "Could not properly evaluate the answer.",
+                "grammar_suggestions": "Please improve clarity and grammar."
+            }
 
-        evaluation_text = resonse.choices[0].message.content
-
-        sentiment = sentiment_analysis(answer)
-
-        final_output = {
-            "evaluation": evaluation_text,
-            "sentiment": sentiment
+        return {
+            "technical_score": float(evaluation_json.get("technical_score", 0)),
+            "grammar_score": float(evaluation_json.get("grammar_score", 0)),
+            "technical_feedback": evaluation_json.get("technical_feedback", ""),
+            "grammar_suggestions": evaluation_json.get("grammar_suggestions", ""),
+            "sentiment": sentiment_analysis(answer)
         }
-
-        print("Final Combined Output:", final_output)
-        return final_output
     
     except Exception as e:
         print("ERROR:", e)
@@ -75,5 +85,5 @@ if __name__ == "__main__":
     result = score_answer(question, answer)
 
     print("\nRESULT")
-    print(result["evaluation"])
+    print(result)
     print("\nSentiment:", result["sentiment"])

@@ -6,6 +6,7 @@ from backend.schemas.interview import (
     StartResponse, StartRequest, AnswerRequest,
     FinishRequest, EvaluationDetail, EvaluationResponse
 )
+from backend.ml.evaluate_answer import score_answer
 
 router = APIRouter(prefix="/interview", tags=["interview"])
 
@@ -54,45 +55,43 @@ async def submit_answer(payload: AnswerRequest):
     }
 
 def _evaluate(sess: Dict[str, Any]) -> EvaluationResponse:
-    details: List[EvaluationDetail] = []
-    total = 0.0
+    details = []
+    total_score = 0.0
 
     for q in sess["questions"]:
         qid = q.id
         qtext = q.text
         ans = sess["answers"].get(qid, "")
 
-        length_score = min(len(ans.split()) / 40, 1.0) * 6
-        keyword_score = 4 if any(
-            w.lower() in ans.lower() for w in qtext.split()[:4]
-        ) else 0
+        llm_eval = score_answer(qtext, ans)
 
-        score = round(length_score + keyword_score, 2)
-        total += score
+        tech = llm_eval["technical_score"]
+        gram = llm_eval["grammar_score"]
+
+        question_score = (tech + gram) / 2  # 0–5
+        total_score += question_score
 
         details.append(
             EvaluationDetail(
-                question_id=qid,
+                question_id=str(qid),
                 question=qtext,
                 answer=ans,
-                score=score,
-                feedback=(
-                    "Excellent answer"
-                    if score >= 8
-                    else "Good answer, add more depth"
-                    if score >= 5
-                    else "Needs improvement"
-                ),
+                score=round(question_score, 2),
+                technical_score=tech,
+                grammar_score=gram,
+                technical_feedback=llm_eval["technical_feedback"],
+                grammar_suggestions=llm_eval["grammar_suggestions"],
             )
         )
 
-    overall = round(total / len(sess["questions"]), 2)
+    overall = round((total_score / len(details)) * 2, 2)  # scale to 10
 
     return EvaluationResponse(
         session_id=sess["session_id"],
         overall_score=overall,
         details=details,
     )
+
 
 @router.post("/finish")
 async def finish_interview(payload: FinishRequest):

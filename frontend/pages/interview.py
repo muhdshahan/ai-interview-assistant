@@ -13,6 +13,10 @@ if not sess:
         num_questions = st.slider("Number of questions", 3, 10, 5)
         start = st.form_submit_button("Start Interview")
     if start:
+        if not job_title.strip():
+            st.warning("Please enter a job title before starting the interview.")
+            st.stop()
+        
         try:
             resp = requests.post(
                 f"{API_BASE}/interview/start",
@@ -50,7 +54,35 @@ st.write(q["text"])
 
 ans_key = f"ans_{q['id']}"
 default_ans = sess["answers"].get(q["id"], "")
+# Clear widget state so it re-reads value=
+if ans_key in st.session_state:
+    del st.session_state[ans_key]
+
 answer_text = st.text_area("Your answer", value=default_ans, key=ans_key, height=180)
+
+st.write("🎤 Answer using voice (optional)")
+audio = st.audio_input("Record your answer")
+
+if audio is not None:
+    if st.button("Transcribe Audio"):
+        with st.spinner("Transcribing..."):
+            files = {
+                "file": ("answer.wav", audio.getvalue(), "audio/wav")
+            }
+            r = requests.post(
+                f"{API_BASE}/stt/transcribe",
+                files=files,
+                timeout=30
+            )
+
+            if r.status_code == 200:
+                transcript = r.json()["text"]
+                # store transcript in your interview session
+                st.session_state.interview_session["answers"][q["id"]] = transcript
+                st.success("Transcription added to answer")
+                st.rerun()
+            else:
+                st.error("Failed to transcribe audio")
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
@@ -100,6 +132,7 @@ if finish_now:
             st.error(data.get("detail") or data.get("error") or "Finish failed")
     except Exception as e:
         st.error(f"Error finishing interview: {e}")
+
 
 st.write("---")
 if st.button("Cancel Interview"):
