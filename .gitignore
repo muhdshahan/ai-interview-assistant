@@ -1,5 +1,5 @@
 # Ignore virtual environment
-# intervenv/
+intervenv/
 
-# # Ignore local environment variables
-# .env
+# Ignore local environment variables
+.env
