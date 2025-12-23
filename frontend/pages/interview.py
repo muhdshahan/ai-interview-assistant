@@ -42,6 +42,9 @@ if not sess:
     st.stop()
 
 sess = st.session_state.get("interview_session")
+# Add this near the top, after getting sess
+if "transcription_status" not in st.session_state:
+    st.session_state.transcription_status = None
 questions = sess["questions"]
 idx = int(sess.get("current_idx", 0))
 idx = max(0, min(idx, len(questions) - 1))
@@ -55,34 +58,62 @@ st.write(q["text"])
 ans_key = f"ans_{q['id']}"
 default_ans = sess["answers"].get(q["id"], "")
 # Clear widget state so it re-reads value=
-if ans_key in st.session_state:
-    del st.session_state[ans_key]
+# if ans_key in st.session_state:
+#     del st.session_state[ans_key]
 
 answer_text = st.text_area("Your answer", value=default_ans, key=ans_key, height=180)
 
-st.write("🎤 Answer using voice (optional)")
-audio = st.audio_input("Record your answer")
+st.write("🎤 Answer using voice")
+audio = st.audio_input("Record your answer", key=f"audio_recorder_{q['id']}")
 
 if audio is not None:
-    if st.button("Transcribe Audio"):
-        with st.spinner("Transcribing..."):
-            files = {
-                "file": ("answer.wav", audio.getvalue(), "audio/wav")
-            }
-            r = requests.post(
-                f"{API_BASE}/stt/transcribe",
-                files=files,
-                timeout=30
-            )
+    if st.button("Transcribe Audio", key=f"transcribe_{q['id']}"):
+        with st.spinner("Transcribing audio..."):
+            try:
+                files = {"file": ("answer.wav", audio.getvalue(), "audio/wav")}
+                r = requests.post(f"{API_BASE}/stt/transcribe", files=files, timeout=30)
 
-            if r.status_code == 200:
-                transcript = r.json()["text"]
-                # store transcript in your interview session
-                st.session_state.interview_session["answers"][q["id"]] = transcript
-                st.success("Transcription added to answer")
-                st.rerun()
-            else:
-                st.error("Failed to transcribe audio")
+                if r.status_code == 200:
+                    transcript = r.json().get("text", "").strip()
+                    if transcript:
+                        # Save transcript to session
+                        st.session_state.interview_session["answers"][q["id"]] = transcript
+                        # Set a temporary flag for success message
+                        st.session_state.transcription_status = "success"
+                        st.session_state.last_transcript = transcript
+                    else:
+                        st.session_state.transcription_status = "empty"
+                else:
+                    st.session_state.transcription_status = "error"
+                    st.session_state.transcription_error = f"Status {r.status_code}: {r.text}"
+
+            except Exception as e:
+                st.session_state.transcription_status = "exception"
+                st.session_state.transcription_error = str(e)
+
+        # Trigger rerun AFTER processing
+        st.rerun()
+
+# --- Show feedback AFTER rerun ---
+if st.session_state.transcription_status == "success":
+    st.success(f"Copy the your answer to the text box: {st.session_state.last_transcript}")
+# Clear the audio recorder for next use
+    if f"audio_recorder_{q['id']}" in st.session_state:
+        del st.session_state[f"audio_recorder_{q['id']}"]
+    
+    # Optional: clear status after showing once
+    st.session_state.transcription_status = None
+
+elif st.session_state.transcription_status == "empty":
+    st.warning("Transcription completed but returned empty text.")
+
+elif st.session_state.transcription_status == "error":
+    st.error("Transcription failed")
+    st.code(st.session_state.transcription_error)
+
+elif st.session_state.transcription_status == "exception":
+    st.error("Error during transcription")
+    st.code(st.session_state.transcription_error)
 
 col1, col2, col3, col4 = st.columns(4)
 with col1:
